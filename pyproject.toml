@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "fast-boiler"
 version = "0.1.0"
 authors = [
-  { name = "Mukhtar Mohsin", email = "mdmukhtarmohsin@gmail.com" },
+  { name = "Mohammad Mukhtar Mohsin", email = "mdmukhtarmohsin@gmail.com" },
 ]
 description = "A CLI tool to generate a FastAPI project with a Repo-Service-Controller architecture."
 readme = "README.md"
@@ -24,7 +24,7 @@ dependencies = [
 ]
 
 [project.urls]
-"Homepage" = "https://github.com/your-username/fast-boiler"
+"Homepage" = "https://github.com/mdmukhtarmohsin/fast-boiler"
 
 # This creates the `fast-boiler` command and points it to the `app` object in `main.py`
 [project.scripts]
