@@ -6,14 +6,10 @@ class {{ ClassName }}Service:
     def __init__(self, repo: {{ ClassName }}Repository):
         self.repo = repo
 
-    def get_{{ name }}_by_id(self, {{ name }}_id: int) -> {{ ClassName }} | None:
-        # Business rule: Example validation
-        if {{ name }}_id <= 0:
-            raise ValueError("{{ ClassName }} ID must be positive.")
-        return self.repo.get_by_id({{ name }}_id)
+    # UPDATED: All methods are now async
+    async def get_{{ name }}_by_id(self, {{ name }}_id: int) -> {{ ClassName }} | None:
+        return await self.repo.get_by_id({{ name }}_id)
 
-    def create_{{ name }}(self, payload: {{ ClassName }}Create) -> {{ ClassName }}:
-        # Business rule: Example validation
-        # if len(payload.name) < 3:
-        #     raise ValueError("Name must be at least 3 characters long")
-        return self.repo.create(payload)
+    async def create_{{ name }}(self, payload: {{ ClassName }}Create) -> {{ ClassName }}:
+        # Business logic can go here before creation
+        return await self.repo.create(payload)

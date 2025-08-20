@@ -1,19 +1,22 @@
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from app.models.{{ name }}_model import {{ ClassName }}
 from app.schemas.{{ name }}_schema import {{ ClassName }}Create
 
 class {{ ClassName }}Repository:
-    def __init__(self, db: Session):
+    def __init__(self, db: AsyncSession):
         self.db = db
 
-    def get_by_id(self, {{ name }}_id: int) -> {{ ClassName }} | None:
+    # UPDATED: All methods are now async
+    async def get_by_id(self, {{ name }}_id: int) -> {{ ClassName }} | None:
         statement = select({{ ClassName }}).where({{ ClassName }}.id == {{ name }}_id)
-        return self.db.execute(statement).scalar_one_or_none()
+        result = await self.db.execute(statement)
+        return result.scalar_one_or_none()
 
-    def create(self, payload: {{ ClassName }}Create) -> {{ ClassName }}:
+    async def create(self, payload: {{ ClassName }}Create) -> {{ ClassName }}:
         db_{{ name }} = {{ ClassName }}(**payload.model_dump())
         self.db.add(db_{{ name }})
-        self.db.commit()
-        self.db.refresh(db_{{ name }})
+        # UPDATED: await commit and refresh
+        await self.db.commit()
+        await self.db.refresh(db_{{ name }})
         return db_{{ name }}
