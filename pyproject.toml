@@ -7,7 +7,7 @@ fast_boiler = ["templates/*.j2"]
 
 [project]
 name = "fast-boiler"
-version = "0.1.3"
+version = "0.1.0"
 authors = [
   { name = "Mohammad Mukhtar Mohsin", email = "mdmukhtarmohsin@gmail.com" },
 ]

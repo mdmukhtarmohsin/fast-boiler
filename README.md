@@ -2,7 +2,7 @@
 
 **Generate FastAPI projects with a modern, scalable architecture in seconds.**
 
-[![PyPI version](https://badge.fury.io/py/fast-boiler.svg)](https://badge.fury.io/py/fast-boiler)
+[![PyPI version](https://badge.fury.io/py/fast-boiler.svg)](https://pypi.org/project/fast-boiler/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ---

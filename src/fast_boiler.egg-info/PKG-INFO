@@ -1,6 +1,6 @@
 Metadata-Version: 2.4
 Name: fast-boiler
-Version: 0.1.3
+Version: 0.1.0
 Summary: A CLI tool to generate a FastAPI project with a Repo-Service-Controller architecture.
 Author-email: Mohammad Mukhtar Mohsin <mdmukhtarmohsin@gmail.com>
 License-Expression: MIT
