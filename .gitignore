@@ -6,6 +6,11 @@ __pycache__/
 env/
 venv/
 .env
+dist/
+build/
+*.egg-info/
+.DS_Store
+fast_boiler.egg-info/
 
 # Database
 app.db
