@@ -1,0 +1,19 @@
+from app.repositories.{{ name }}_repo import {{ ClassName }}Repository
+from app.schemas.{{ name }}_schema import {{ ClassName }}Create
+from app.models.{{ name }}_model import {{ ClassName }}
+
+class {{ ClassName }}Service:
+    def __init__(self, repo: {{ ClassName }}Repository):
+        self.repo = repo
+
+    def get_{{ name }}_by_id(self, {{ name }}_id: int) -> {{ ClassName }} | None:
+        # Business rule: Example validation
+        if {{ name }}_id <= 0:
+            raise ValueError("{{ ClassName }} ID must be positive.")
+        return self.repo.get_by_id({{ name }}_id)
+
+    def create_{{ name }}(self, payload: {{ ClassName }}Create) -> {{ ClassName }}:
+        # Business rule: Example validation
+        # if len(payload.name) < 3:
+        #     raise ValueError("Name must be at least 3 characters long")
+        return self.repo.create(payload)

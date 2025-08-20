@@ -1,0 +1,40 @@
+Metadata-Version: 2.4
+Name: fast-boiler
+Version: 0.1.0
+Summary: A CLI tool to generate a FastAPI project with a Repo-Service-Controller architecture.
+Author-email: Mukhtar Mohsin <mdmukhtarmohsin@gmail.com>
+Project-URL: Homepage, https://github.com/your-username/fast-boiler
+Classifier: Programming Language :: Python :: 3
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Classifier: Framework :: FastAPI
+Classifier: Topic :: Software Development :: Code Generators
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown
+Requires-Dist: typer[all]
+Requires-Dist: jinja2
+
+# Fast Boiler
+
+A CLI tool to generate a FastAPI project with a modern, scalable Repo-Service-Controller architecture.
+
+## Installation
+
+```bash
+pip install .
+```
+
+Usage
+Initialize a New Project
+
+```bash
+fast-boiler init my_project_name
+```
+Generate a New Resource
+
+Navigate into your new project and run:
+
+```
+cd my_project_name
+fast-boiler generate product
+```
