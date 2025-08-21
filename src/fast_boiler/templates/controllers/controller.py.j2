@@ -1,0 +1,63 @@
+from fastapi import APIRouter, Depends, HTTPException, status
+{% if is_async %}
+from sqlalchemy.ext.asyncio import AsyncSession
+{% else %}
+from sqlalchemy.orm import Session
+{% endif %}
+from fastapi_pagination import Page, add_pagination
+from app.database import get_db
+from app.services.{{ name }}_service import {{ name }}_service as service
+from app.schemas.{{ name }}_schema import {{ ClassName }}Create, {{ ClassName }}Update, {{ ClassName }}Response
+# 👇 NEW IMPORT for the self-documenting query dependency
+from .dependencies import parse_query_params
+
+router = APIRouter(prefix="/{{ plural_name }}", tags=["{{ plural_name }}"])
+
+@router.post("/", response_model={{ ClassName }}Response, status_code=status.HTTP_201_CREATED)
+{% if is_async %}async {% endif %}def create_{{ name }}(
+    payload: {{ ClassName }}Create,
+    db: {% if is_async %}AsyncSession{% else %}Session{% endif %} = Depends(get_db)
+):
+    return {% if is_async %}await {% endif %}service.create(db, payload=payload)
+
+# 👇 THIS IS THE UPDATED ENDPOINT that uses the new dependency
+@router.get("/", response_model=Page[{{ ClassName }}Response])
+{% if is_async %}async {% endif %}def get_all_{{ name }}s(
+    query: dict = Depends(parse_query_params),
+    db: {% if is_async %}AsyncSession{% else %}Session{% endif %} = Depends(get_db)
+):
+    return {% if is_async %}await {% endif %}service.get_all(db, query=query)
+
+@router.get("/{{ '{' }}{{ name }}_id{{ '}' }}", response_model={{ ClassName }}Response)
+{% if is_async %}async {% endif %}def get_{{ name }}_by_id(
+    {{ name }}_id: int,
+    db: {% if is_async %}AsyncSession{% else %}Session{% endif %} = Depends(get_db)
+):
+    db_obj = {% if is_async %}await {% endif %}service.get_by_id(db, id={{ name }}_id)
+    if db_obj is None:
+        raise HTTPException(status_code=404, detail="{{ ClassName }} not found")
+    return db_obj
+
+@router.put("/{{ '{' }}{{ name }}_id{{ '}' }}", response_model={{ ClassName }}Response)
+{% if is_async %}async {% endif %}def update_{{ name }}(
+    {{ name }}_id: int,
+    payload: {{ ClassName }}Update,
+    db: {% if is_async %}AsyncSession{% else %}Session{% endif %} = Depends(get_db)
+):
+    db_obj = {% if is_async %}await {% endif %}service.update(db, id={{ name }}_id, payload=payload)
+    if db_obj is None:
+        raise HTTPException(status_code=404, detail="{{ ClassName }} not found")
+    return db_obj
+
+@router.delete("/{{ '{' }}{{ name }}_id{{ '}' }}", response_model={{ ClassName }}Response)
+{% if is_async %}async {% endif %}def delete_{{ name }}(
+    {{ name }}_id: int,
+    db: {% if is_async %}AsyncSession{% else %}Session{% endif %} = Depends(get_db)
+):
+    db_obj = {% if is_async %}await {% endif %}service.delete(db, id={{ name }}_id)
+    if db_obj is None:
+        raise HTTPException(status_code=404, detail="{{ ClassName }} not found")
+    return db_obj
+
+# Add pagination to the router
+add_pagination(router)

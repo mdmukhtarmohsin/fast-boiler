@@ -23,6 +23,7 @@ classifiers = [
 ]
 dependencies = [
     "typer",
+    "rich",
     "jinja2",
 ]
 

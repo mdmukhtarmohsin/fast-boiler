@@ -1,89 +1,110 @@
 import typer
 from pathlib import Path
 from jinja2 import Environment, FileSystemLoader
+from rich.console import Console
+from rich.panel import Panel
 
+# --- Setup ---
 app = typer.Typer()
-
-# Set up Jinja2 environment to load templates from the 'templates' directory
+console = Console()
 try:
     TEMPLATE_DIR = Path(__file__).parent / "templates"
     env = Environment(loader=FileSystemLoader(TEMPLATE_DIR), trim_blocks=True, lstrip_blocks=True)
-except Exception as e:
-    typer.secho(f"Error setting up Jinja2 environment: {e}", fg=typer.colors.RED)
+except Exception:
+    console.print("[bold red]Error: 'templates' directory not found.[/bold red]")
     raise typer.Exit()
 
+# --- Helper Functions ---
 def render_template(template_name: str, context: dict) -> str:
     """Renders a Jinja2 template with the given context."""
     return env.get_template(template_name).render(context)
 
-def create_resource_files(name: str, base_path: Path):
+def create_resource_files(name: str, base_path: Path, context: dict):
     """Helper function to create all files for a new resource."""
-    context = {
-        "name": name,
-        "ClassName": name.capitalize(),
-        "plural_name": name + "s",
+    context["name"] = name
+    context["ClassName"] = name.capitalize()
+    context["plural_name"] = name + "s"
+    
+    template_map = {
+        "models/model.py.j2": f"models/{name}_model.py",
+        "schemas/schema.py.j2": f"schemas/{name}_schema.py",
+        "repositories/base_repo.py.j2": "repositories/base_repo.py",
+        "repositories/repo.py.j2": f"repositories/{name}_repo.py",
+        "services/service.py.j2": f"services/{name}_service.py",
+        "controllers/controller.py.j2": f"controllers/{name}_controller.py",
+        "controllers/dependencies.py.j2": "controllers/dependencies.py",
     }
-    (base_path / f"models/{name}_model.py").write_text(render_template("model.py.j2", context))
-    (base_path / f"schemas/{name}_schema.py").write_text(render_template("schema.py.j2", context))
-    (base_path / f"repositories/{name}_repo.py").write_text(render_template("repo.py.j2", context))
-    (base_path / f"services/{name}_service.py").write_text(render_template("service.py.j2", context))
-    (base_path / f"controllers/{name}_controller.py").write_text(render_template("controller.py.j2", context))
+    
+    for template, output_file in template_map.items():
+        (base_path / output_file).write_text(render_template(template, context))
 
+# --- CLI Commands ---
 @app.command()
-def init(project_name: str):
+def init():
     """
-    Initializes a new FastAPI project with a Repo-Service-Controller structure.
+    Initializes a new, production-ready FastAPI project.
     """
-    typer.echo(f"🚀 Creating FastAPI project: {project_name}")
+    console.print(Panel.fit("🚀 [bold green]Fast Boiler: Project Initialization[/bold green]"))
+    
+    project_name = typer.prompt("What is the name of your project?")
+    
+    context = {"project_name": project_name}
+    console.print("\n[bold cyan]Project Configuration:[/bold cyan]")
+    context["is_async"] = typer.confirm("▶ Use asynchronous (async/await) code?", default=True)
+    
+    # Defaulting to SQLite for a simple, file-based setup
+    db_choice = "sqlite"
+    context["db_choice"] = db_choice
+    
+    if context["is_async"]:
+        context["db_driver"] = "aiosqlite"
+        context["db_url"] = f"sqlite+aiosqlite:///./app.db"
+    else: # Sync
+        context["db_driver"] = "" # Not needed for sync sqlite
+        context["db_url"] = f"sqlite:///./app.db"
+
+    console.print(f"\n✅ Configuration complete. Generating project '[bold]{project_name}[/bold]'...")
+    
     root_path = Path(project_name)
     app_path = root_path / "app"
     
     # Create directory structure
-    dirs = ["controllers", "models", "repositories", "schemas", "services"]
-    app_path.mkdir(parents=True, exist_ok=True)
-    for dir_name in dirs:
-        (app_path / dir_name).mkdir(exist_ok=True)
+    dirs_to_create = ["controllers", "models", "repositories", "schemas", "services"]
+    for dir_name in dirs_to_create:
+        (app_path / dir_name).mkdir(parents=True, exist_ok=True)
         (app_path / dir_name / "__init__.py").touch()
-
-    # Create core files
-    (app_path / "database.py").write_text(render_template("database.py.j2", {}))
     (app_path / "__init__.py").touch()
-    (root_path / ".gitignore").write_text(render_template("gitignore.j2", {}))
-    (root_path / "requirements.txt").write_text(render_template("requirements.txt.j2", {}))
-
-    # Generate the default 'user' resource and main.py
-    create_resource_files("user", base_path=app_path)
-    main_py_content = render_template("main.py.j2", {"default_resource": "user"})
-    (app_path / "main.py").write_text(main_py_content)
     
-    typer.secho(f"✅ Project '{project_name}' created successfully!", fg=typer.colors.GREEN)
-    typer.echo("\nTo get started:")
-    typer.echo(f"  cd {project_name}")
-    typer.echo("  python -m venv venv")
-    typer.echo("  source venv/bin/activate  # On Windows use `venv\\Scripts\\activate`")
-    typer.echo("  pip install -r requirements.txt")
-    typer.echo("  uvicorn app.main:app --reload")
+    # Generate core files
+    (app_path / "database.py").write_text(render_template("database.py.j2", context))
+    (root_path / ".gitignore").write_text(render_template("gitignore.j2", {}))
+    (root_path / "requirements.txt").write_text(render_template("requirements.txt.j2", context))
+    # Add a simple README for the generated project
+    (root_path / "README.md").write_text(f"# {project_name}\n\nProject generated by fast-boiler.")
+
+
+    # Generate the default 'user' resource
+    create_resource_files("user", base_path=app_path, context=context)
+    
+    # Generate main.py
+    context["default_resource"] = "user"
+    (app_path / "main.py").write_text(render_template("main.py.j2", context))
+    
+    console.print("\n[bold green]✓ Project generation complete![/bold green]")
+    console.print("\nTo get started:")
+    console.print(f"  [cyan]cd {project_name}[/cyan]")
+    console.print("  [cyan]python3 -m venv venv[/cyan]")
+    console.print("  [cyan]source venv/bin/activate[/cyan]")
+    console.print("  [cyan]pip install -r requirements.txt[/cyan]")
+    console.print("  [cyan]uvicorn app.main:app --reload[/cyan]\n")
 
 @app.command()
 def generate(name: str):
     """
-    Generates the files for a new resource (model, schema, repo, service, controller).
+    Generates the files for a new resource. (This feature is under development)
     """
-    name = name.lower()
-    base_path = Path("app") # Assumes running from project root
+    console.print(f"📦 [yellow]Generating resource: {name} (feature coming soon)[/yellow]")
 
-    if not base_path.exists() or not base_path.is_dir():
-        typer.secho("Error: 'app' directory not found.", fg=typer.colors.RED)
-        typer.secho("Please run this command from your project's root directory.", fg=typer.colors.RED)
-        raise typer.Exit()
-    
-    typer.echo(f"📦 Generating resource: {name}")
-    create_resource_files(name, base_path=base_path)
-    
-    typer.secho(f"✓ Generated files for '{name}'.", fg=typer.colors.GREEN)
-    typer.echo("\n👉 Next step: Open 'app/main.py' and include the new router:")
-    typer.secho(f"from app.controllers import {name}_controller", fg=typer.colors.YELLOW)
-    typer.secho(f"app.include_router({name}_controller.router)", fg=typer.colors.YELLOW)
 
 if __name__ == "__main__":
     app()

@@ -12,15 +12,16 @@ Classifier: Topic :: Software Development :: Code Generators
 Requires-Python: >=3.8
 Description-Content-Type: text/markdown
 Requires-Dist: typer
+Requires-Dist: rich
 Requires-Dist: jinja2
 
 # Fast Boiler 🚀
 
 **Generate FastAPI projects with a modern, scalable architecture in seconds.**
 
-[![PyPI version](https://badge.fury.io/py/fast-boiler.svg)](https://badge.fury.io/py/fast-boiler)
+[![PyPI version](https://badge.fury.io/py/fast-boiler.svg)](https://pypi.org/project/fast-boiler/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-
+    
 ---
 
 `fast-boiler` is a command-line tool that scaffolds a complete FastAPI application using the robust **Repository → Service → Controller** layering pattern. Stop writing boilerplate and start building features.

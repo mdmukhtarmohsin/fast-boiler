@@ -4,7 +4,7 @@
 
 [![PyPI version](https://badge.fury.io/py/fast-boiler.svg)](https://pypi.org/project/fast-boiler/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-
+    
 ---
 
 `fast-boiler` is a command-line tool that scaffolds a complete FastAPI application using the robust **Repository → Service → Controller** layering pattern. Stop writing boilerplate and start building features.
