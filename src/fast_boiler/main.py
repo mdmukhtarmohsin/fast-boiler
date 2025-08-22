@@ -1,3 +1,4 @@
+import secrets
 import typer
 from pathlib import Path
 from jinja2 import Environment, FileSystemLoader
@@ -20,14 +21,29 @@ def render_template(template_name: str, context: dict) -> str:
     return env.get_template(template_name).render(context)
 
 def create_resource_files(name: str, base_path: Path, context: dict):
-    """Helper function to create all files for a new resource."""
+    """
+    Helper function to create all files for a new resource.
+    It intelligently selects specialized templates for the 'user' resource when auth is enabled.
+    """
     context["name"] = name
     context["ClassName"] = name.capitalize()
     context["plural_name"] = name + "s"
     
+    # --- Start of new logic ---
+    # Default to generic templates
+    model_template = "models/model.py.j2"
+    schema_template = "schemas/schema.py.j2"
+
+    # If we are creating the 'user' resource AND auth is enabled,
+    # swap in the specialized auth templates instead.
+    if name == "user" and context.get("use_auth", False):
+        model_template = "models/user_auth_model.py.j2"
+        schema_template = "schemas/user_auth_schema.py.j2"
+    # --- End of new logic ---
+
     template_map = {
-        "models/model.py.j2": f"models/{name}_model.py",
-        "schemas/schema.py.j2": f"schemas/{name}_schema.py",
+        model_template: f"models/{name}_model.py",
+        schema_template: f"schemas/{name}_schema.py",
         "repositories/repo.py.j2": f"repositories/{name}_repo.py",
         "services/service.py.j2": f"services/{name}_service.py",
         "controllers/controller.py.j2": f"controllers/{name}_controller.py",
@@ -41,6 +57,7 @@ def create_resource_files(name: str, base_path: Path, context: dict):
 
     for template, output_file in template_map.items():
         (base_path / output_file).write_text(render_template(template, context))
+
 
 def inject_line(file_path: Path, new_line: str, marker: str):
     """Injects a new line of code next to a marker if it doesn't already exist."""
@@ -61,36 +78,87 @@ def inject_line(file_path: Path, new_line: str, marker: str):
 # --- CLI Commands ---
 @app.command()
 def init():
-    # ... (the init command is unchanged from the last working version) ...
+    # --- This part is mostly the same ---
     console.print(Panel.fit("🚀 [bold green]Fast Boiler: Project Initialization[/bold green]"))
     project_name = typer.prompt("What is the name of your project?")
     context = {"project_name": project_name}
     console.print("\n[bold cyan]Project Configuration:[/bold cyan]")
     context["is_async"] = typer.confirm("▶ Use asynchronous (async/await) code?", default=True)
-    db_choice = "sqlite"
-    context["db_choice"] = db_choice
-    if context["is_async"]:
-        context["db_driver"] = "aiosqlite"
-        context["db_url"] = f"sqlite+aiosqlite:///./app.db"
+
+    # 👇 NEW: Add interactive questions for authentication
+    console.print("\n[bold cyan]Core Features:[/bold cyan]")
+    context["use_auth"] = typer.confirm("▶ Include FastAPI Users for authentication? (Recommended)", default=True)
+    if context["use_auth"]:
+        context["use_oauth"] = typer.confirm("  ▶ Add social OAuth login (e.g., Google)?", default=False)
     else:
-        context["db_driver"] = ""
-        context["db_url"] = f"sqlite:///./app.db"
+        context["use_oauth"] = False
+
+    # 👇 MODIFIED: The database choice now intelligently defaults to PostgreSQL if auth is selected
+    db_choice = "postgresql" if context["use_auth"] else "sqlite"
+    context["db_choice"] = db_choice
+    
+    if context["is_async"]:
+        context["db_driver"] = "asyncpg" if db_choice == "postgresql" else "aiosqlite"
+        context["db_url"] = f"postgresql+asyncpg://user:password@host:port/{project_name}" if db_choice == "postgresql" else f"sqlite+aiosqlite:///./app.db"
+    else: # Sync
+        context["db_driver"] = "psycopg2-binary" if db_choice == "postgresql" else ""
+        context["db_url"] = f"postgresql://user:password@host:port/{project_name}" if db_choice == "postgresql" else f"sqlite:///./app.db"
+
+    # 👇 NEW: Generate secrets and OAuth placeholders for the context dictionary
+    if context["use_auth"]:
+        context["secret_key"] = secrets.token_hex(32)
+        if context["use_oauth"]:
+            context["google_client_id"] = "your-google-client-id"
+            context["google_client_secret"] = "your-google-client-secret"
+
     console.print(f"\n✅ Configuration complete. Generating project '[bold]{project_name}[/bold]'...")
+    
     root_path = Path(project_name)
     app_path = root_path / "app"
+    
+    # --- Directory generation is now smarter ---
     dirs_to_create = ["controllers", "models", "repositories", "schemas", "services"]
     for dir_name in dirs_to_create:
         (app_path / dir_name).mkdir(parents=True, exist_ok=True)
         (app_path / dir_name / "__init__.py").touch()
     (app_path / "__init__.py").touch()
+
+    # 👇 NEW: Create the auth directory if the user selected it
+    if context["use_auth"]:
+        (app_path / "auth").mkdir(exist_ok=True)
+        (app_path / "auth" / "__init__.py").touch()
+
+    # --- File generation now includes new files ---
     (app_path / "database.py").write_text(render_template("database.py.j2", context))
     (root_path / ".gitignore").write_text(render_template("gitignore.j2", {}))
     (root_path / "requirements.txt").write_text(render_template("requirements.txt.j2", context))
     (root_path / "README.md").write_text(f"# {project_name}\n\nProject generated by fast-boiler.")
+
+    # 👇 NEW: Generate .env files if auth is selected
+    if context["use_auth"]:
+        (root_path / ".env").write_text(render_template(".env.j2", context))
+        (root_path / ".env.example").write_text(render_template(".env.example.j2", context))
+
+    # The user resource is generated (it will be transformed by the templates if auth is on)
     context["default_resource"] = "user"
-    # USE THE NEW TEMPLATE for models/__init__.py
     (app_path / "models" / "__init__.py").write_text(render_template("models/__init__.py.j2", context))
     create_resource_files("user", base_path=app_path, context=context)
+
+    # 👇 NEW: Generate the specific auth module files
+    if context["use_auth"]:
+        auth_template_map = {
+            "auth/backend.py.j2": "auth/backend.py",
+            "auth/database.py.j2": "auth/database.py",
+            "auth/manager.py.j2": "auth/manager.py",
+            "auth/routers.py.j2": "auth/routers.py",
+        }
+        if context["use_oauth"]:
+            auth_template_map["auth/oauth.py.j2"] = "auth/oauth.py"
+        
+        for template, output_file in auth_template_map.items():
+            (app_path / output_file).write_text(render_template(template, context))
+
+    # This part is the same as before
     (app_path / "main.py").write_text(render_template("main.py.j2", context))
     console.print("\n[bold green]✓ Project generation complete![/bold green]")
     console.print("\nTo get started:")
