@@ -8,6 +8,7 @@ from app.auth.routers import (
     auth_router,
     register_router,
     reset_password_router,
+    users_router  # <-- NEW: Import the users_router
 )
 {% if use_oauth %}
 from app.auth.routers import google_oauth_router
@@ -19,8 +20,8 @@ from app.auth.routers import google_oauth_router
 # Lifespan manager to handle startup events
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # 👇 CORRECTED: The table creation logic now runs regardless of the auth setting.
-    # This is the correct behavior for a project without Alembic.
+    # This creates all tables defined in your models on startup.
+    # In a production app with Alembic, this would be removed.
     {% if is_async %}
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
@@ -47,6 +48,7 @@ app.add_middleware(
 
 
 # Include the main resource router (e.g., for users)
+# This now provides the admin-only, paginated GET /users endpoint
 app.include_router({{ default_resource }}_controller.router)
 
 {% if use_auth %}
@@ -54,6 +56,9 @@ app.include_router({{ default_resource }}_controller.router)
 app.include_router(auth_router, prefix="/auth/jwt", tags=["auth"])
 app.include_router(register_router, prefix="/auth", tags=["auth"])
 app.include_router(reset_password_router, prefix="/auth", tags=["auth"])
+
+# 👇 NEW: Include the router for self-service and admin user management
+app.include_router(users_router, prefix="/users", tags=["users"])
 
 {% if use_oauth and google_oauth_router %}
 app.include_router(google_oauth_router, prefix="/auth/google", tags=["auth"])
@@ -69,6 +74,6 @@ async def read_root():
 
 
 {% if not is_async %}
-# For sync projects, create tables here before the app starts.
+# For sync projects, create tables here before the app starts
 Base.metadata.create_all(bind=engine)
 {% endif %}
